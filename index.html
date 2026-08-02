@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>都道府県当てクイズ ― 家計調査トリビア</title>
+<style>
+  :root{
+    --bg:#100f1a;
+    --panel:#1a1830;
+    --panel2:#211f3b;
+    --ink:#f5f3fb;
+    --ink-dim:#a79fc4;
+    --pink:#ff5da2;
+    --teal:#2fd6c4;
+    --yellow:#ffd23f;
+    --purple:#8b6ff2;
+    --line:#312d52;
+    --good:#2fd6c4;
+    --bad:#ff5d6c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Yu Gothic",-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh;}
+  ::selection{background:var(--pink);color:#fff;}
+  .wrap{max-width:640px;margin:0 auto;padding:40px 20px 80px;min-height:100vh;
+    display:flex;flex-direction:column;justify-content:center;}
+
+  .card{
+    background:linear-gradient(160deg,var(--panel),#161428);
+    border:1px solid var(--line);border-radius:24px;padding:36px 28px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.5);
+  }
+
+  .tag{display:inline-block;font-size:11px;padding:4px 12px;border-radius:20px;
+    background:rgba(255,93,162,.14);color:var(--pink);margin-bottom:14px;letter-spacing:.05em;font-weight:700;}
+
+  /* ---------------- INTRO ---------------- */
+  #screen-intro{text-align:center;}
+  #screen-intro h1{font-size:clamp(24px,5vw,34px);line-height:1.4;margin:0 0 16px;font-weight:800;}
+  #screen-intro h1 span{color:var(--yellow);}
+  #screen-intro p{color:var(--ink-dim);font-size:15px;line-height:1.9;margin:0 0 28px;}
+  .emoji-row{font-size:38px;margin-bottom:20px;letter-spacing:8px;}
+
+  .btn{
+    display:inline-block;background:linear-gradient(135deg,var(--pink),var(--purple));
+    color:#fff;border:none;border-radius:14px;padding:15px 34px;font-size:16px;font-weight:800;
+    cursor:pointer;font-family:inherit;box-shadow:0 10px 24px -8px rgba(255,93,162,.5);
+    transition:transform .15s ease;
+  }
+  .btn:hover{transform:translateY(-2px);}
+  .btn:active{transform:translateY(0);}
+  .btn.secondary{background:var(--panel2);box-shadow:none;border:1px solid var(--line);}
+
+  /* ---------------- QUIZ ---------------- */
+  #screen-quiz{display:none;}
+  .progress-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .progress-label{font-size:12.5px;color:var(--ink-dim);font-weight:700;}
+  .score-pill{font-size:12.5px;color:var(--yellow);font-weight:800;}
+  .progress-bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-bottom:26px;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));
+    border-radius:4px;transition:width .3s ease;}
+
+  .q-topic{font-size:12.5px;color:var(--teal);font-weight:700;letter-spacing:.05em;margin-bottom:8px;}
+  .q-text{font-size:19px;font-weight:800;line-height:1.6;margin-bottom:24px;}
+  .q-text b{color:var(--yellow);}
+
+  .choices{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+  .choice{
+    background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;
+    padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;text-align:left;
+    color:var(--ink);font-family:inherit;transition:border-color .15s ease,background .15s ease;
+  }
+  .choice:hover:not(:disabled){border-color:var(--purple);}
+  .choice:disabled{cursor:default;}
+  .choice.correct{border-color:var(--good);background:rgba(47,214,196,.12);color:var(--good);}
+  .choice.wrong{border-color:var(--bad);background:rgba(255,93,108,.12);color:var(--bad);}
+
+  .feedback{
+    display:none;margin-top:18px;padding:16px;border-radius:12px;background:var(--panel2);
+    border:1px solid var(--line);font-size:13.5px;line-height:1.9;color:var(--ink-dim);
+  }
+  .feedback b{color:var(--ink);}
+  .feedback .rank-list{margin-top:8px;}
+  .feedback .rank-item{display:flex;justify-content:space-between;padding:3px 0;}
+
+  .next-row{display:flex;justify-content:flex-end;margin-top:20px;}
+
+  /* ---------------- RESULT ---------------- */
+  #screen-result{display:none;text-align:center;}
+  .result-emoji{font-size:56px;margin-bottom:6px;}
+  .result-title{font-size:24px;font-weight:800;color:var(--yellow);margin-bottom:8px;}
+  .result-score{font-size:44px;font-weight:800;margin-bottom:4px;}
+  .result-score span{font-size:.4em;color:var(--ink-dim);}
+  .result-desc{color:var(--ink-dim);font-size:14.5px;line-height:1.9;margin:12px 0 26px;}
+
+  canvas#share-canvas{display:none;}
+  #share-preview{display:none;max-width:280px;width:100%;border-radius:16px;margin:0 auto 18px;border:1px solid var(--line);}
+  .share-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;}
+  .share-btn{
+    background:var(--panel2);border:1px solid var(--line);border-radius:12px;color:var(--ink);
+    padding:11px 18px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;
+    text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+  }
+  .share-btn:hover{border-color:var(--pink);}
+  .share-btn.x{background:#000;}
+
+  footer{max-width:640px;margin:0 auto;padding:0 20px 60px;color:var(--ink-dim);font-size:11.5px;line-height:1.9;text-align:center;}
+  footer a{color:var(--teal);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+
+    <!-- INTRO -->
+    <div id="screen-intro">
+      <span class="tag">総務省統計局「家計調査」トリビア</span>
+      <div class="emoji-row">🥟🍜🍚☕🍞</div>
+      <h1>この食べ物、<span>本当に1位</span>の都市はどこ？</h1>
+      <p>水戸は納豆で本当に日本一？ 鳥取はカレーで日本一？ ―総務省が毎年発表している「家計調査」の都市別支出ランキングから、全<span id="pool-size-label">12</span>問の中からランダムに<span id="round-size-label">8</span>問を出題します。毎回違う組み合わせで遊べます。思い込みに気をつけて！</p>
+      <button class="btn" id="btn-start">クイズをはじめる（<span id="round-size-label2">8</span>問）</button>
+    </div>
+
+    <!-- QUIZ -->
+    <div id="screen-quiz">
+      <div class="progress-row">
+        <span class="progress-label" id="progress-label">第1問 / 8問</span>
+        <span class="score-pill" id="score-pill">正解 0</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%;"></div></div>
+
+      <div class="q-topic" id="q-topic">品目：ぎょうざ</div>
+      <div class="q-text" id="q-text">-</div>
+
+      <div class="choices" id="choices"></div>
+
+      <div class="feedback" id="feedback"></div>
+
+      <div class="next-row">
+        <button class="btn" id="btn-next" style="display:none;">次の問題へ</button>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="screen-result">
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title" id="result-title">統計マスター！</div>
+      <div class="result-score"><span id="result-score-num">0</span><span id="result-score-total"> / 8問正解</span></div>
+      <div class="result-desc" id="result-desc"></div>
+
+      <canvas id="share-canvas" width="1080" height="1080"></canvas>
+      <img id="share-preview">
+      <div class="share-actions">
+        <button class="share-btn" id="btn-download">⬇ 結果画像を保存</button>
+        <a class="share-btn x" id="btn-x-share" href="#" target="_blank">𝕏 でシェア</a>
+      </div>
+      <div>
+        <button class="btn secondary" id="btn-retry">もう一度挑戦する</button>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    出典: 総務省統計局「家計調査（二人以上の世帯）品目別都道府県庁所在市及び政令指定都市ランキング」（2024年・一部2023〜2025年平均）。順位・金額は公表資料および報道に基づく概数です。本アプリは統計トリビアを楽しむための個人制作の非公式クイズであり、総務省統計局とは関係ありません。正確な数値は<a href="https://www.stat.go.jp/data/kakei/5.html" target="_blank">総務省統計局の公式ページ</a>をご確認ください。
+  </footer>
+</div>
+
+<script>
+// ============================================================
+// QUIZ DATA — 総務省統計局「家計調査」品目別都市ランキングより
+// ============================================================
+const QUESTION_POOL = [
+  {
+    topic: '品目：ぎょうざ（1世帯当たり年間購入額）',
+    text: '「ぎょうざのまち」として名高い宇都宮市を抑え、2024年の購入額で<b>2年連続1位</b>だったのはどこ？',
+    choices: ['浜松市', '宇都宮市', '宮崎市', '名古屋市'],
+    correct: 0,
+    ranking: [['1位 浜松市','4,065円'],['2位 宮崎市','3,517円'],['3位 宇都宮市','2,801円']],
+    trivia: '宇都宮市・宮崎市・浜松市による「ぎょうざ日本一」争いは毎年恒例のニュースになっている。'
+  },
+  {
+    topic: '品目：ラーメン（外食）',
+    text: '2024年、外食のラーメンに年間<b>22,389円</b>を使い3年連続で1位になった都市は？',
+    choices: ['札幌市', '福岡市', '山形市', '新潟市'],
+    correct: 2,
+    ranking: [['1位 山形市','22,389円'],['2位 新潟市','16,292円'],['3位 仙台市','15,534円']],
+    trivia: '山形市は出前文化や「冷やしラーメン」など独自のラーメン文化で知られ、支出額が突出して多い。'
+  },
+  {
+    topic: '品目：納豆',
+    text: '「納豆といえば水戸」のイメージが強いが、2024年の購入額で水戸市はまさかの5位。実際に1位だったのは？',
+    choices: ['水戸市', '福島市', '秋田市', '盛岡市'],
+    correct: 1,
+    ranking: [['1位 福島市','7,830円'],['2位 秋田市','7,199円'],['5位 水戸市','6,627円']],
+    trivia: '水戸市は2016年以来の首位奪還を狙ったが、2024年は順位を二つ下げて5位に終わった。'
+  },
+  {
+    topic: '品目：カレールー',
+    text: '「カレーのまち」として有名な鳥取市を抑え、2024年に購入額1位だったのは？',
+    choices: ['鳥取市', '神戸市', '新潟市', '金沢市'],
+    correct: 2,
+    ranking: [['1位 新潟市','1,668円'],['2位 鳥取市','1,604円'],['3位 金沢市','1,546円']],
+    trivia: '鳥取市は2016〜2018年に1位を記録した実力者だが、近年は日本海側の他都市に競り負けている。'
+  },
+  {
+    topic: '品目：コーヒー',
+    text: '「コーヒーの街」のイメージがある京都市・神戸市を抑えて支出額1位（2022〜2024年平均）だったのは？',
+    choices: ['神戸市', '京都市', '大津市', '東京都区部'],
+    correct: 2,
+    ranking: [['1位 大津市','-'],['2位 京都市','-'],['3位 東京都区部','-']],
+    trivia: '滋賀県大津市は喫茶文化が根強く、コーヒー・喫茶代の支出額で全国上位の常連。'
+  },
+  {
+    topic: '品目：パン',
+    text: '「パン好きの街」といえば京都市を思い浮かべがちだが、2023〜2025年平均で購入金額1位だったのは？',
+    choices: ['京都市', '神戸市', '堺市', '岡山市'],
+    correct: 1,
+    ranking: [['1位 神戸市','-'],['2位 堺市','-'],['3位 京都市','-']],
+    trivia: '神戸市は開港以来のパン文化の歴史が長く、京都市としばしば1位を争う。'
+  },
+  {
+    topic: '品目：牛肉（購入金額・数量）',
+    text: '神戸牛や松阪牛のイメージが強い中、2022〜2024年平均の牛肉の購入金額・数量でまさかの1位だった都市は？',
+    choices: ['神戸市', '堺市', '鹿児島市', '松山市'],
+    correct: 1,
+    ranking: [['1位 堺市（金額・数量とも）','-'],['―','大阪府統計課まとめ']],
+    trivia: '「和牛」の街として有名な神戸市・鹿児島市を抑えて、大阪府堺市が牛肉の購入金額・数量ともに全国1位。'
+  },
+  {
+    topic: '品目：バナナ（購入金額・数量）',
+    text: '果物のイメージが薄い都市だが、2022〜2024年平均でバナナの購入金額・数量ともに1位だったのは？',
+    choices: ['那覇市', '堺市', '大阪市', '神戸市'],
+    correct: 1,
+    ranking: [['1位 堺市（金額・数量とも）','-'],['―','大阪府統計課まとめ']],
+    trivia: '意外にも南国イメージのある那覇市ではなく、堺市がバナナ消費で全国トップだった。'
+  },
+  {
+    topic: '品目：たこ（購入金額・数量）',
+    text: '「明石だこ」で有名な兵庫県だが、明石市は調査対象外。では2022〜2024年平均でたこの購入金額・数量1位の都市は？',
+    choices: ['神戸市', '高松市', '堺市', '大阪市'],
+    correct: 2,
+    ranking: [['1位 堺市（金額・数量とも）','-'],['―','大阪府統計課まとめ']],
+    trivia: 'たこ焼き文化の大阪市ではなく、隣接する堺市がたこの購入金額・数量ともに全国1位という結果に。'
+  },
+  {
+    topic: '品目：はくさい（購入金額）',
+    text: '鍋料理でおなじみの白菜。2022〜2024年平均で購入金額1位だった都市は？',
+    choices: ['仙台市', '大阪市', '長野市', '京都市'],
+    correct: 1,
+    ranking: [['1位 大阪市','-'],['―','大阪府統計課まとめ']],
+    trivia: '鍋文化のイメージが強い東北・信州勢を抑え、大阪市が白菜の購入金額で1位だった。'
+  },
+  {
+    topic: '品目：焼肉（外食）',
+    text: '和牛の産地として知られる都市を抑え、焼肉の外食支出額で1位になったことがあるのは？',
+    choices: ['高知市', '神戸市', '鹿児島市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 高知市','-'],['―','総務省統計局 家計調査（外食）']],
+    trivia: '高知県は「かつおの藁焼き」などの焼き料理文化が根強く、焼肉外食支出でも全国上位の常連。'
+  },
+  {
+    topic: '品目：すし（外食）',
+    text: '新鮮な海の幸で知られる金沢市。2022〜2024年平均ですし（外食）の支出額で1位だった都市は、実際にどこ？',
+    choices: ['富山市', '金沢市', '静岡市', '福岡市'],
+    correct: 1,
+    ranking: [['1位 金沢市','-'],['2位 静岡市','-'],['3位 富山市','-']],
+    trivia: '金沢市は近江町市場をはじめ新鮮な海の幸で知られ、すし（外食）支出額で全国トップクラス。'
+  },
+  {
+    topic: '品目：ぶどう（購入金額）',
+    text: 'ぶどう収穫量が全国の26%を占める産地。県庁所在地も家計調査の購入金額（令和4〜6年平均）で当然のように1位だったのは？',
+    choices: ['甲府市', '岡山市', '長野市', '山形市'],
+    correct: 0,
+    ranking: [['1位 甲府市', '7,301円']],
+    trivia: '山梨県はぶどう収穫量全国の26%を占める産地。県庁所在地の甲府市は購入金額でも文句なしの日本一。'
+  },
+  {
+    topic: '品目：あさり（購入金額）',
+    text: '海に面していない内陸都市なのに、あさりの購入金額（令和4〜6年平均）でまさかの全国1位になったのは？',
+    choices: ['甲府市', '松本市', '奈良市', '岐阜市'],
+    correct: 0,
+    ranking: [['1位 甲府市', '714円']],
+    trivia: '海のない山梨県甲府市が、なぜかあさり購入額で全国トップ。ぶどうだけでなく意外な品目でも日本一を持つ。'
+  },
+  {
+    topic: '品目：生うどん・そば（購入金額）',
+    text: '「うどん県」の名は伊達じゃない。生うどん・そばの購入金額（2024年）で長野市に千円以上の差をつけて1位だった都市は？',
+    choices: ['高松市', '松山市', '徳島市', '高知市'],
+    correct: 0,
+    ranking: [['1位 高松市', '6,582円'], ['2位 長野市', '5,368円'], ['3位 名古屋市', '4,598円']],
+    trivia: '香川県高松市の生うどん・そば購入額は全国平均を大きく上回る。讃岐うどん文化の強さがよくわかる。'
+  },
+  {
+    topic: '品目：緑茶（購入金額）',
+    text: '茶どころとして知られるこの都市、緑茶の年間購入金額は7,664円（令和6年）で全国1位。どこ？',
+    choices: ['静岡市', '宇治市', '狭山市', '八女市'],
+    correct: 0,
+    ranking: [['1位 静岡市', '7,664円']],
+    trivia: '静岡市は緑茶の年間購入量（1,415g）でも全国1位。名実ともに「お茶の都」。'
+  },
+  {
+    topic: '品目：まぐろ（購入金額）',
+    text: 'まぐろの購入金額（2025年）で10,467円と全国1位だったこの都市はどこ？',
+    choices: ['静岡市', '高知市', '長崎市', '鹿児島市'],
+    correct: 0,
+    ranking: [['1位 静岡市', '10,467円']],
+    trivia: '焼津港などまぐろの水揚げで知られる静岡県。県庁所在地の静岡市もまぐろ購入額日本一。'
+  },
+  {
+    topic: '品目：かつお（鮮魚・購入量）',
+    text: '昭和51年（1976年）から現在まで、かつお（鮮魚）の1世帯当たり購入量でずっと全国1位を守り続けている都市は？',
+    choices: ['高知市', '鹿児島市', '静岡市', '宮崎市'],
+    correct: 0,
+    ranking: [['1位 高知市', '全国平均の約4.4倍（令和5年）']],
+    trivia: '鰹のたたきで知られる高知市は、家計調査が始まって以来ずっとかつお購入量日本一を守り続けている。'
+  },
+  {
+    topic: '品目：しじみ（購入量）',
+    text: '宍道湖という好漁場を抱えるこの都市、しじみの購入量は全国平均の10倍以上。2012年から15年連続で全国1位なのはどこ？',
+    choices: ['松江市', '米子市', '鳥取市', '出雲市'],
+    correct: 0,
+    ranking: [['1位 松江市', '2,055g（全国平均の10.3倍）']],
+    trivia: '宍道湖のしじみ漁で知られる松江市は、しじみ購入量で圧倒的な全国1位を長年守り続けている。'
+  },
+  {
+    topic: '品目：麺類（総称・購入金額）',
+    text: 'そば・うどん・スパゲッティなどを含む「麺類」全体の年間支出金額で、2025年に盛岡市を抜いて初の全国1位になったのは？',
+    choices: ['秋田市', '盛岡市', '山形市', '高松市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '28,347円'], ['2位 山形市', '26,483円'], ['3位 高松市', '25,906円']],
+    trivia: '秋田市は麺類全体の支出額で悲願の初1位を達成。乾麺や稲庭うどんなどもよく食べられている。'
+  },
+  {
+    topic: '品目：焼き鳥（購入金額）',
+    text: '焼き鳥の年間購入額が4,971円（令和4〜6年平均）と、2位福井市に1000円以上の差をつけて全国1位だった都市は？',
+    choices: ['青森市', '福井市', '甲府市', '熊本市'],
+    correct: 0,
+    ranking: [['1位 青森市', '4,971円'], ['2位 福井市', '3,952円']],
+    trivia: '青森市は焼き鳥のほか、カップ麺など19品目で全国1位になったこともある「日本一」の常連都市。'
+  },
+  {
+    topic: '品目：うなぎのかば焼き（支出額）',
+    text: 'ぎょうざだけでなく、うなぎのかば焼きへの支出額（2021〜23年平均）でも2位京都市を抑えて1位だったのは？',
+    choices: ['浜松市', '名古屋市', '京都市', '金沢市'],
+    correct: 0,
+    ranking: [['1位 浜松市', '5,149円'], ['2位 京都市', '4,504円'], ['3位 金沢市', '3,369円']],
+    trivia: '浜松市はぎょうざだけでなく、うなぎの名産地としても知られ、支出額でも全国1位。二冠都市だった。'
+  },
+  {
+    topic: '品目：たまねぎ（支出金額）',
+    text: 'たまねぎへの年間支出額が4,530円（2020年）で全国1位だった都市は？',
+    choices: ['横浜市', '札幌市', '川崎市', 'さいたま市'],
+    correct: 0,
+    ranking: [['1位 横浜市', '4,530円']],
+    trivia: '購入量ベースでは札幌市が全国1位（24,629g）だが、支出金額では横浜市がトップだった。'
+  },
+  {
+    topic: '品目：プリン（支出金額）',
+    text: 'プリンへの年間支出額が2,410円（2020年）で全国1位だった都市は？',
+    choices: ['宇都宮市', '金沢市', '千葉市', '甲府市'],
+    correct: 0,
+    ranking: [['1位 宇都宮市', '2,410円']],
+    trivia: '近年（令和4〜6年平均）では金沢市が1位、宇都宮市が2位という調査もあり、僅差の争いが続いている。'
+  },
+  {
+    topic: '品目：豚肉（支出金額）',
+    text: 'カレールーだけでなく、豚肉の年間支出金額（2023〜25年平均）でも全国1位だった都市は？',
+    choices: ['新潟市', 'さいたま市', '福島市', '前橋市'],
+    correct: 0,
+    ranking: [['1位 新潟市', '-'], ['2位 福島市', '-'], ['3位 さいたま市', '-']],
+    trivia: '新潟市は塩ザケ・豚肉・さやまめ・食塩・カレールー・サラダなど6品目で全国1位という「何でも1位」の都市。'
+  },
+  {
+    topic: '品目：塩ザケ（購入量）',
+    text: '新潟市が豚肉やカレールーとともに、購入量で全国1位を誇るもう一つの品目はどれ？',
+    choices: ['塩ザケ', '塩サバ', '塩辛', 'たらこ'],
+    correct: 0,
+    ranking: [['1位 新潟市', '購入数量 全国1位（令和4〜6年平均）']],
+    trivia: '新潟市は塩ザケなど9品目で年間購入数量が全国1位。新潟の豊かな食文化がうかがえる。'
+  },
+  {
+    topic: '品目：キャベツ（支出金額）',
+    text: 'キャベツへの年間支出額が3,980円（2020年）で全国1位だった都市は？',
+    choices: ['静岡市', '名古屋市', '岡山市', '佐賀市'],
+    correct: 0,
+    ranking: [['1位 静岡市', '3,980円']],
+    trivia: '静岡市はまぐろや緑茶だけでなく、キャベツの支出額でも全国トップだったことがある。'
+  },
+  {
+    topic: '品目：みそ（支出金額）',
+    text: 'みその支出額ランキング（令和4〜6年平均）で、信州みその長野市・新潟市を抑えて1位だった都市は？',
+    choices: ['秋田市', '長野市', '新潟市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '-'], ['2位 長野市', '-'], ['3位 新潟市', '-']],
+    trivia: '信州みそで有名な長野市を抑え、秋田市がみその支出額で全国1位という結果に。'
+  },
+  {
+    topic: '品目：清酒（日本酒・支出金額）',
+    text: '日本酒（清酒）の年間消費額が11,276円で、2位に大差をつけて全国1位だった都市は？',
+    choices: ['秋田市', '新潟市', '神戸市', '京都市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '11,276円']],
+    trivia: '秋田市はビール購入額でも全国上位の常連。日本酒でも圧倒的な支出額で1位となった。'
+  },
+  {
+    topic: '品目：かに（生鮮・支出金額）',
+    text: 'かに（生鮮）への支出額が6,045円（2020年）で全国1位だった都市は？',
+    choices: ['鳥取市', '福井市', '金沢市', '和歌山市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '6,045円'], ['2位 福井市', '-'], ['3位 和歌山市', '-']],
+    trivia: '松葉ガニで有名な鳥取県。県庁所在地の鳥取市はかにの支出額でも一貫して全国1位を守っている。'
+  },
+  {
+    topic: '品目：ようかん（支出額）',
+    text: '福井市が全国1位を誇る、意外な和菓子は？',
+    choices: ['ようかん', 'もなか', 'どら焼き', 'カステラ'],
+    correct: 0,
+    ranking: [['1位 福井市', '-']],
+    trivia: '福井県では法要の際にようかんを振る舞う独特の文化があり、消費量・支出額ともに全国トップクラス。'
+  },
+  {
+    topic: '品目：トマト（支出金額）',
+    text: 'トマトへの年間支出額が11,350円（2020年）で全国1位だったのは？',
+    choices: ['東京都区部', 'さいたま市', '富山市', '横浜市'],
+    correct: 0,
+    ranking: [['1位 東京都区部', '11,350円']],
+    trivia: '意外にも産地イメージの薄い東京都区部が、トマトの支出額では全国トップだった。'
+  },
+  {
+    topic: '品目：しょうゆ（支出金額）',
+    text: 'しょうゆの支出額ランキング（2021〜2023年平均）で、鹿児島市・熊本市という「甘い醤油」文化圏を抑えて1位だった都市は？',
+    choices: ['山形市', '鹿児島市', '熊本市', '福岡市'],
+    correct: 0,
+    ranking: [['1位 山形市', '-'], ['2位 鹿児島市', '-'], ['3位 熊本市', '-']],
+    trivia: '九州の甘い醤油文化圏を抑えて、山形市がしょうゆの支出額で全国1位という結果に。'
+  },
+  {
+    topic: '品目：いちご（購入数量・支出金額）',
+    text: 'いちごの生産量日本一の県。その県庁所在地は、いちごの購入数量・支出金額ともに全国1位だった。どこ？',
+    choices: ['宇都宮市', '福岡市', '熊本市', '静岡市'],
+    correct: 0,
+    ranking: [['1位 宇都宮市', '購入数量・支出金額とも1位']],
+    trivia: '栃木県は「とちおとめ」などいちごの生産量日本一。県庁所在地の宇都宮市も購入数量・支出金額ともに全国トップ。'
+  },
+  {
+    topic: '品目：卵（鶏卵・支出金額）',
+    text: '卵への年間支出額が12,539円（2020年、全国平均の1.24倍）で全国1位だった都市は？',
+    choices: ['福島市', '高知市', '鳥取市', '岐阜市'],
+    correct: 0,
+    ranking: [['1位 福島市', '12,539円']],
+    trivia: '納豆でも紹介した福島市は、卵の支出額でも全国トップになったことがある「食」の実力都市。'
+  },
+  {
+    topic: '品目：アイスクリーム・シャーベット（支出金額）',
+    text: '和菓子文化が根付くこの都市、アイスクリーム・シャーベットへの支出額も10,822円と都市別トップクラス。どこ？',
+    choices: ['金沢市', '山形市', '福島市', '宇都宮市'],
+    correct: 0,
+    ranking: [['1位 金沢市', '10,822円']],
+    trivia: '金沢市は和菓子だけでなく、洋菓子・アイスクリームへの支出額でも全国トップクラス。'
+  },
+  {
+    topic: '品目：カップ麺（即席麺・支出金額）',
+    text: 'カップ麺（即席麺）の年間購入額が8,402円（2024年）で、長年にわたり全国1位を守り続けている都市は？',
+    choices: ['青森市', '仙台市', '札幌市', '盛岡市'],
+    correct: 0,
+    ranking: [['1位 青森市', '8,402円']],
+    trivia: '青森市は焼き鳥だけでなく、カップ麺・即席麺の購入額でも全国トップの常連都市。'
+  },
+  {
+    topic: '品目：じゃがいも（支出金額）',
+    text: 'じゃがいもへの年間支出額が3,556円（2020年）で全国1位だった都市は？',
+    choices: ['横浜市', '新潟市', '静岡市', '札幌市'],
+    correct: 0,
+    ranking: [['1位 横浜市', '3,556円']],
+    trivia: 'たまねぎ・きゅうりに続き、じゃがいもでも横浜市が野菜の支出額日本一を記録している。'
+  },
+  {
+    topic: '品目：チーズ（支出金額）',
+    text: 'チーズへの年間支出額が9,511円（2020年）で全国1位だったのは？',
+    choices: ['東京都区部', '横浜市', '神戸市', '札幌市'],
+    correct: 0,
+    ranking: [['1位 東京都区部', '9,511円']],
+    trivia: '消費量では神奈川県が1位だが、支出金額では東京都区部がチーズにお金をかけている。'
+  },
+  {
+    topic: '品目：豆腐（支出金額）',
+    text: '「ゆし豆腐」「島豆腐」など独自の豆腐文化を持つこの都市、豆腐への支出額は全国平均の1.30倍で全国1位。どこ？',
+    choices: ['那覇市', '盛岡市', '静岡市', '金沢市'],
+    correct: 0,
+    ranking: [['1位 那覇市', '6,918円']],
+    trivia: '沖縄独自の豆腐文化を持つ那覇市は、豆腐の支出額で全国1位。ゆし豆腐や島豆腐が食卓に並ぶ。'
+  },
+  {
+    topic: '品目：ちくわ（支出金額）',
+    text: 'ちくわへの年間支出額が3,327円（令和4〜6年平均）で全国1位だった都市は？',
+    choices: ['鳥取市', '徳島市', '松山市', '高松市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '3,327円'], ['2位 徳島市', '-'], ['3位 松山市', '-']],
+    trivia: '鳥取市はかにだけでなく、ちくわの支出額でも全国トップという「練り物」にも強い都市。'
+  },
+  {
+    topic: '品目：せんべい（支出金額）',
+    text: '「せんべい」への年間支出額が8,270円（2020年）で全国1位だった都市は？',
+    choices: ['水戸市', 'さいたま市', '千葉市', '新潟市'],
+    correct: 0,
+    ranking: [['1位 水戸市', '8,270円']],
+    trivia: '納豆で有名な水戸市は、せんべいの支出額でも全国トップになったことがある。'
+  },
+  {
+    topic: '品目：ハム（支出金額）',
+    text: 'ハムへの年間支出額が6,592円（2020年、全国平均の1.28倍）で全国1位だった都市は？',
+    choices: ['神戸市', '横浜市', '仙台市', '鹿児島市'],
+    correct: 0,
+    ranking: [['1位 神戸市', '6,592円']],
+    trivia: '神戸市はパンだけでなく、ハムなど洋風の食文化に関わる品目でも支出額が高い傾向がある。'
+  },
+  {
+    topic: '品目：きゅうり（支出金額）',
+    text: 'きゅうりへの年間支出額が4,937円（2020年）で全国1位だった都市は？',
+    choices: ['横浜市', 'さいたま市', '前橋市', '千葉市'],
+    correct: 0,
+    ranking: [['1位 横浜市', '4,937円']],
+    trivia: '横浜市はたまねぎ・じゃがいもに続き、きゅうりでも野菜の支出額日本一を記録している。'
+  },
+  {
+    topic: '品目：マヨネーズ（支出金額・購入量）',
+    text: '「マヨラー県」として知られる鳥取県を抑え、マヨネーズの支出額・購入量ともに全国1位だった都市は？',
+    choices: ['熊本市', '鳥取市', '福岡市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 熊本市', '1,604円（購入量3,330g）']],
+    trivia: '「マヨラー県」の異名を持つ鳥取を抑え、熊本市がマヨネーズの支出額・購入量ともに全国1位という結果に。'
+  },
+  {
+    topic: '品目：にんじん（支出金額）',
+    text: 'にんじんへの年間支出額が3,809円（2020年）で全国1位だった都市は？',
+    choices: ['那覇市', '札幌市', '横浜市', '福岡市'],
+    correct: 0,
+    ranking: [['1位 那覇市', '3,809円']],
+    trivia: '豆腐に続き、にんじんでも那覇市が支出額で全国1位。沖縄の食生活の豊かさがうかがえる。'
+  },
+  {
+    topic: '品目：かき（牡蠣・支出金額）',
+    text: 'かき（牡蠣）への年間支出額が3,018円（2020年）で全国1位だった都市は？',
+    choices: ['広島市', '松江市', '仙台市', '岡山市'],
+    correct: 0,
+    ranking: [['1位 広島市', '3,018円']],
+    trivia: '広島県は牡蠣の生産量で圧倒的な全国1位。県庁所在地の広島市も牡蠣の支出額で全国トップ。'
+  },
+  {
+    topic: '品目：すいか（支出金額）',
+    text: 'すいかへの年間支出額が2,406円（2020年）で全国1位だった都市は？',
+    choices: ['名古屋市', '熊本市', '鳥取市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 名古屋市', '2,406円']],
+    trivia: '意外にも産地イメージの薄い名古屋市が、すいかの支出額では全国トップだった。'
+  },
+  {
+    topic: '品目：ねぎ（支出金額）',
+    text: 'ねぎへの年間支出額が4,460円（2020年）で全国1位だったのは？',
+    choices: ['東京都区部', '名古屋市', '大阪市', '横浜市'],
+    correct: 0,
+    ranking: [['1位 東京都区部', '4,460円']],
+    trivia: '「東京ねぎ」の名の通り、東京都区部はねぎの支出額でも全国トップクラス。'
+  },
+  {
+    topic: '品目：なす（支出金額）',
+    text: 'なすへの年間支出額が3,167円（2020年、全国平均の1.43倍）で全国1位だった都市は？',
+    choices: ['秋田市', '京都市', '仙台市', '新潟市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '3,167円']],
+    trivia: '秋田市はビール・日本酒だけでなく、なすの支出額でも全国トップという「食」の実力都市。'
+  },
+  {
+    topic: '品目：もやし（支出金額）',
+    text: 'もやしへの年間支出額が1,521円（2020年）で全国1位だった都市は？',
+    choices: ['鳥取市', '大阪市', '福岡市', '札幌市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '1,521円']],
+    trivia: '鳥取市はかに・ちくわ・マヨネーズに続き、もやしの支出額でも全国トップという野菜好きな都市。'
+  },
+  {
+    topic: '品目：梨（支出金額）',
+    text: '「二十世紀梨」で有名なこの県。県庁所在地は梨の支出額でも全国1位（2021〜23年平均）だった。どこ？',
+    choices: ['鳥取市', '千葉市', '富山市', '福島市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '-'], ['2位 千葉市', '-'], ['3位 富山市', '-']],
+    trivia: '「二十世紀梨」で知られる鳥取県。県庁所在地の鳥取市は梨の支出額でも全国トップ。'
+  },
+  {
+    topic: '品目：れんこん（支出金額）',
+    text: 'れんこんへの年間支出額が1,527円（2020年）で全国1位だった都市は？',
+    choices: ['新潟市', '金沢市', '徳島市', '水戸市'],
+    correct: 0,
+    ranking: [['1位 新潟市', '1,527円'], ['2位 金沢市', '1,341円']],
+    trivia: '新潟市は塩ザケ・豚肉・カレールーに続き、れんこんでも全国1位という「何でも1位」の都市。'
+  },
+  {
+    topic: '品目：バター（支出金額）',
+    text: 'バターへの年間支出額が2,132円（2020年）で全国1位だったのは？',
+    choices: ['東京都区部', '横浜市', '札幌市', '名古屋市'],
+    correct: 0,
+    ranking: [['1位 東京都区部', '2,132円']],
+    trivia: 'チーズ・ワインに続き、バターでも東京都区部が支出額で全国トップだった。'
+  },
+  {
+    topic: '品目：まんじゅう（支出金額）',
+    text: '「まんじゅう」への年間支出額が2,410円（2020年）で全国1位だった都市は？',
+    choices: ['福島市', '鳥取市', '鹿児島市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 福島市', '2,410円']],
+    trivia: '納豆・卵に続き、まんじゅうでも福島市が支出額日本一になったことがある「食」の実力都市。'
+  },
+  {
+    topic: '品目：ワイン（支出金額）',
+    text: 'ワインへの年間支出額が9,135円（2020年）で全国1位だったのは？',
+    choices: ['東京都区部', '甲府市', '千葉市', '横浜市'],
+    correct: 0,
+    ranking: [['1位 東京都区部', '9,135円']],
+    trivia: '意外にもワイン生産地の甲府市ではなく、東京都区部がワインの支出額で全国トップだった。'
+  },
+  {
+    topic: '品目：焼酎（支出金額）',
+    text: '焼酎への年間支出額が約1.2万円で全国1位だった都市は？',
+    choices: ['宮崎市', '鹿児島市', '大分市', '熊本市'],
+    correct: 0,
+    ranking: [['1位 宮崎市', '約12,000円']],
+    trivia: '芋焼酎で知られる鹿児島市を抑え、宮崎市が焼酎の支出額で全国1位という結果に。'
+  },
+  {
+    topic: '品目：ビール（支出金額）',
+    text: 'ビールへの年間購入額が17,793円（2024年）で、2位青森市（17,634円）にわずかの差で全国1位だった都市は？',
+    choices: ['秋田市', '青森市', '札幌市', '新潟市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '17,793円'], ['2位 青森市', '17,634円']],
+    trivia: '秋田市はビール・日本酒・なすなど複数の品目で全国1位を記録する「食」の実力都市。'
+  },
+  {
+    topic: '品目：コロッケ（支出金額）',
+    text: 'コロッケへの年間支出額が3,462円（2020年）で全国1位だった都市は？',
+    choices: ['福井市', '富山市', '金沢市', '新潟市'],
+    correct: 0,
+    ranking: [['1位 福井市', '3,462円']],
+    trivia: '福井市はようかん・天ぷら/フライに続き、コロッケの支出額でも全国トップという揚げ物好きな都市。'
+  },
+  {
+    topic: '品目：ごぼう（支出金額）',
+    text: 'ごぼうへの年間支出額が1,494円で全国1位だった都市は？',
+    choices: ['佐賀市', '長崎市', '福島市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 佐賀市', '1,494円']],
+    trivia: '佐賀市はごぼうの生産・消費が盛んな地域で、支出額でも全国トップクラスとなっている。'
+  },
+  {
+    topic: '品目：ソーセージ（支出金額）',
+    text: 'ソーセージへの年間支出額が7,900円（2020年、全国平均の1.25倍）で全国1位だった都市は？',
+    choices: ['青森市', '仙台市', '札幌市', '盛岡市'],
+    correct: 0,
+    ranking: [['1位 青森市', '7,900円']],
+    trivia: '青森市は焼き鳥・カップ麺に続き、ソーセージの支出額・購入量でも全国1位という食欲旺盛な都市。'
+  },
+  {
+    topic: '品目：天ぷら・フライ（支出金額）',
+    text: '天ぷら・フライへの年間支出額が16,883円（2020年）で全国1位だった都市は？',
+    choices: ['福井市', '新潟市', '富山市', '金沢市'],
+    correct: 0,
+    ranking: [['1位 福井市', '16,883円'], ['2位 新潟市', '-'], ['3位 富山市', '-']],
+    trivia: '福井市はコロッケ・ようかんに続き、天ぷら・フライの支出額でも全国トップという揚げ物王国。'
+  },
+  {
+    topic: '品目：ハンバーグ（支出金額）',
+    text: 'ハンバーグへの年間支出額が2,608円（2020年）で全国1位だった都市は？',
+    choices: ['那覇市', '静岡市', '水戸市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 那覇市', '2,608円']],
+    trivia: '豆腐・にんじんに続き、ハンバーグでも那覇市が支出額で全国トップという結果に。'
+  },
+  {
+    topic: '品目：ケチャップ（支出金額）',
+    text: 'ケチャップへの年間支出額が891円（2020年）で全国1位だった都市は？',
+    choices: ['熊本市', '鳥取市', '福岡市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 熊本市', '891円']],
+    trivia: 'マヨネーズに続き、ケチャップでも熊本市が支出額で全国1位。調味料に強い都市と言える。'
+  },
+  {
+    topic: '品目：ジャム（支出金額）',
+    text: 'ジャムの支出額ランキング（2018〜2022年平均）で全国1位だった都市は？',
+    choices: ['新潟市', '仙台市', '福島市', '山形市'],
+    correct: 0,
+    ranking: [['1位 新潟市', '-']],
+    trivia: 'れんこんや塩ザケなどに続き、ジャムでも新潟市が支出額で全国トップという「何でも1位」の都市。'
+  },
+  {
+    topic: '品目：メロン（支出金額）',
+    text: 'メロンの生産量日本一を誇る「メロン王国」。その県庁所在地は、メロンへの年間支出額も3,757円で全国1位。どこ？',
+    choices: ['水戸市', '静岡市', '鳥取市', '秋田市'],
+    correct: 0,
+    ranking: [['1位 水戸市（茨城県）', '3,757円'], ['2位 秋田市', '2,054円'], ['3位 熊本市', '1,977円']],
+    trivia: '茨城県はメロン収穫量全国1位の「メロン王国」。県庁所在地の水戸市もメロンの支出額で全国トップ。'
+  },
+  {
+    topic: '品目：たらこ（支出金額）',
+    text: 'たらこへの年間支出額が5,674円（2020年、全国平均の2.67倍）で全国1位だった都市は？',
+    choices: ['福岡市', '北九州市', '仙台市', '青森市'],
+    correct: 0,
+    ranking: [['1位 福岡市', '5,674円']],
+    trivia: '明太子文化で知られる福岡市は、たらこの支出額でも全国トップ。購入量では隣の北九州市が1位という結果も。'
+  },
+  {
+    topic: '品目：ぶり（支出金額）',
+    text: '昭和28年に県庁所在市別ランキングが始まって以来、通算66回目の1位という記録を持つ、ぶりの支出額日本一の都市は？',
+    choices: ['富山市', '鳥取市', '金沢市', '長崎市'],
+    correct: 0,
+    ranking: [['1位 富山市', '4年連続・通算66回目の1位']],
+    trivia: '「ぶり街道」で知られる富山県。県庁所在地の富山市はぶりの支出額で圧倒的な実績を持つ。'
+  },
+  {
+    topic: '品目：しらす（支出金額）',
+    text: 'しらす干しの支出額ランキング（2022〜2024年平均）で、2位和歌山市・3位高知市を抑えて1位だった都市は？',
+    choices: ['静岡市', '和歌山市', '高知市', '鹿児島市'],
+    correct: 0,
+    ranking: [['1位 静岡市', '-'], ['2位 和歌山市', '-'], ['3位 高知市', '-']],
+    trivia: '駿河湾でのしらす漁が盛んな静岡県。県庁所在地の静岡市はしらすの支出額でも全国トップ。'
+  },
+  {
+    topic: '品目：いわし（支出金額）',
+    text: 'いわしの支出額ランキング（2022〜2024年平均）で、2位松江市・3位大分市を抑えて1位だった都市は？',
+    choices: ['鳥取市', '松江市', '大分市', '長崎市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '-'], ['2位 松江市', '-'], ['3位 大分市', '-']],
+    trivia: 'かに・もやし・ちくわに続き、いわしでも鳥取市が支出額で全国トップという結果に。'
+  },
+  {
+    topic: '品目：さば（支出金額）',
+    text: 'さばの支出額ランキング（2021〜2023年平均）で、2位宮崎市・3位松江市を抑えて1位だった都市は？',
+    choices: ['鹿児島市', '宮崎市', '松江市', '長崎市'],
+    correct: 0,
+    ranking: [['1位 鹿児島市', '-'], ['2位 宮崎市', '-'], ['3位 松江市', '-']],
+    trivia: '焼酎・酢に続き、さばでも鹿児島市が支出額で全国トップクラスという結果に。'
+  },
+  {
+    topic: '品目：ピーマン（支出金額）',
+    text: 'ピーマンへの年間支出額が2,990円（令和4〜6年平均）で全国1位だった都市は？',
+    choices: ['京都市', '高知市', '宮崎市', '鹿児島市'],
+    correct: 0,
+    ranking: [['1位 京都市', '2,990円']],
+    trivia: 'パンで有名な京都市は、ピーマンの支出額でも全国トップという「食」の実力都市。'
+  },
+  {
+    topic: '品目：しいたけ（支出金額）',
+    text: '生しいたけへの年間支出額が3,034円（2020年、全国平均の1.45倍）で全国1位だった都市は？',
+    choices: ['奈良市', '大分市', '徳島市', '静岡市'],
+    correct: 0,
+    ranking: [['1位 奈良市', '3,034円']],
+    trivia: '意外にも産地イメージの薄い奈良市が、生しいたけの支出額では全国トップだった。'
+  },
+  {
+    topic: '品目：さつまいも（支出金額）',
+    text: 'さつまいもの支出額ランキング（2022〜2024年平均）で、2位大津市・3位京都市を抑えて1位だった都市は？',
+    choices: ['徳島市', '大津市', '京都市', '鹿児島市'],
+    correct: 0,
+    ranking: [['1位 徳島市', '-'], ['2位 大津市', '-'], ['3位 京都市', '-']],
+    trivia: '鳴門金時で知られる徳島県。県庁所在地の徳島市はさつまいもの支出額でも全国トップ。'
+  },
+  {
+    topic: '品目：だいこん漬（支出金額）',
+    text: '「だいこん漬」（たくあんなど）への支出額で全国1位だった都市は？',
+    choices: ['秋田市', '山形市', '福島市', '新潟市'],
+    correct: 0,
+    ranking: [['1位 秋田市', '-']],
+    trivia: 'いぶりがっこで知られる秋田市は、だいこん漬の支出額でも全国トップという漬物文化の街。'
+  },
+  {
+    topic: '品目：さやまめ（支出金額）',
+    text: '新潟市が塩ザケ・豚肉・カレールーなどとともに全国1位を誇る、もう一つの品目はどれ？',
+    choices: ['さやまめ', 'そらまめ', 'えだまめ', 'グリーンピース'],
+    correct: 0,
+    ranking: [['1位 新潟市', '購入数量・支出金額とも1位（令和5〜7年平均）']],
+    trivia: '新潟市は塩ザケ・豚肉・カレールー・食塩・サラダに加え、さやまめでも全国1位という「何でも1位」の都市。'
+  },
+  {
+    topic: '品目：りんご（支出金額）',
+    text: 'りんごへの年間支出額が10,919円（2020年）で、産地の青森市を抑えて全国1位だった都市は？',
+    choices: ['長野市', '青森市', '盛岡市', '秋田市'],
+    correct: 0,
+    ranking: [['1位 長野市', '10,919円'], ['2位 青森市', '-'], ['3位 盛岡市', '-']],
+    trivia: 'りんご生産量日本一は青森県だが、消費・支出額では長野市が全国トップという意外な結果に。'
+  },
+  {
+    topic: '品目：柿（支出金額）',
+    text: '柿への年間支出額が2,397円（2020年、全国平均の2.16倍）で全国1位だった都市は？',
+    choices: ['岐阜市', '奈良市', '和歌山市', '福岡市'],
+    correct: 0,
+    ranking: [['1位 岐阜市', '2,397円']],
+    trivia: '岐阜市は柿の支出額・購入量（9,120g）ともに全国1位。「富有柿」の産地としても知られる。'
+  },
+  {
+    topic: '品目：オレンジ（支出金額）',
+    text: 'オレンジ（生果）への年間支出額が1,202円で全国1位だった都市は？',
+    choices: ['福島市', '仙台市', '盛岡市', '山形市'],
+    correct: 0,
+    ranking: [['1位 福島市', '1,202円']],
+    trivia: '桃やまんじゅう、卵に続き、オレンジでも福島市が支出額で全国トップという「食」の実力都市。'
+  },
+  {
+    topic: '品目：みかん（支出金額）',
+    text: 'みかんへの年間支出額が6,613円（2020年、全国平均の1.52倍）で、産地上位の都市らしく全国1位だった都市は？',
+    choices: ['和歌山市', '静岡市', '松山市', '福岡市'],
+    correct: 0,
+    ranking: [['1位 和歌山市', '6,613円'], ['2位 静岡市', '-'], ['3位 松山市', '-']],
+    trivia: 'みかん生産量日本一の和歌山県。県庁所在地の和歌山市も支出額で文句なしの全国1位。'
+  },
+  {
+    topic: '品目：もも（桃・支出金額）',
+    text: '桃の生産量では山梨県に次ぐ全国2位だが、家計調査での桃の支出額では8年連続で全国1位を守り続けているのは？',
+    choices: ['福島市', '甲府市', '岡山市', '山形市'],
+    correct: 0,
+    ranking: [['1位 福島市', '8年連続1位']],
+    trivia: '生産量トップの山梨県（甲府市）を抑え、福島市が桃の支出額で8年連続の全国1位という結果に。'
+  },
+  {
+    topic: '品目：麦茶（他の茶葉・支出金額）',
+    text: '麦茶・玄米茶など「他の茶葉」への年間支出額が2,609円（2020年）で全国1位だった都市は？',
+    choices: ['神戸市', '京都市', '大阪市', '奈良市'],
+    correct: 0,
+    ranking: [['1位 神戸市', '2,609円']],
+    trivia: 'パン・ハムに続き、麦茶などの「他の茶葉」でも神戸市が支出額で全国トップだった。'
+  },
+  {
+    topic: '品目：炭酸飲料（支出金額）',
+    text: '炭酸飲料への年間支出額が9,530円（2020年）で全国1位だった都市は？',
+    choices: ['青森市', '仙台市', '秋田市', '札幌市'],
+    correct: 0,
+    ranking: [['1位 青森市', '9,530円']],
+    trivia: '焼き鳥・カップ麺・ソーセージに続き、炭酸飲料でも青森市が支出額で全国トップという結果に。'
+  },
+  {
+    topic: '品目：果実・野菜ジュース（支出金額）',
+    text: '果実・野菜ジュースの支出額ランキング（2022〜2024年平均）で、2位盛岡市・3位秋田市を抑えて1位だった都市は？',
+    choices: ['青森市', '盛岡市', '秋田市', '仙台市'],
+    correct: 0,
+    ranking: [['1位 青森市', '-'], ['2位 盛岡市', '-'], ['3位 秋田市', '-']],
+    trivia: '炭酸飲料に続き、果実・野菜ジュースでも青森市が支出額で全国トップという飲料好きな都市。'
+  },
+  {
+    topic: '品目：ウイスキー（支出金額）',
+    text: 'ウイスキーへの年間支出額が4,277円（2020年、全国平均の1.80倍）で全国1位だった都市は？',
+    choices: ['札幌市', '秋田市', '仙台市', '青森市'],
+    correct: 0,
+    ranking: [['1位 札幌市', '4,277円']],
+    trivia: '酒どころのイメージが強い秋田市を抑え、札幌市がウイスキーの支出額で全国トップだった。'
+  },
+  {
+    topic: '品目：乳酸菌飲料（支出金額）',
+    text: '乳酸菌飲料への年間支出額が9,003円で全国1位だった都市は？',
+    choices: ['鹿児島市', '前橋市', '熊本市', '宮崎市'],
+    correct: 0,
+    ranking: [['1位 鹿児島市', '9,003円'], ['2位 前橋市', '6,202円']],
+    trivia: '焼酎・さばに続き、乳酸菌飲料でも鹿児島市が支出額で全国トップという結果に。'
+  },
+  {
+    topic: '品目：酢（支出金額）',
+    text: '酢への年間支出額が1,078円（令和4〜6年平均）で全国1位だった都市は？',
+    choices: ['鹿児島市', '京都市', '和歌山市', '松山市'],
+    correct: 0,
+    ranking: [['1位 鹿児島市', '1,078円']],
+    trivia: 'さば・焼酎に続き、酢でも鹿児島市が支出額で全国トップという「食」の実力都市。'
+  },
+  {
+    topic: '品目：ソース（支出金額）',
+    text: 'ソースの支出額ランキング（2022〜2024年平均）で、2位岡山市・3位神戸市を抑えて1位だった都市は？',
+    choices: ['広島市', '岡山市', '神戸市', '大阪市'],
+    correct: 0,
+    ranking: [['1位 広島市', '-'], ['2位 岡山市', '-'], ['3位 神戸市', '-']],
+    trivia: 'お好み焼き文化で知られる広島市は、ソースの支出額でも全国トップという結果に。'
+  },
+  {
+    topic: '品目：食塩（支出金額）',
+    text: '新潟市が塩ザケ・豚肉・カレールー・さやまめとともに全国1位を誇る、もう一つの調味料は？',
+    choices: ['食塩', 'こしょう', '味の素', '砂糖'],
+    correct: 0,
+    ranking: [['1位 新潟市', '支出金額 全国1位（令和5〜7年平均）']],
+    trivia: '新潟市は食塩でも全国1位。塩ザケ・豚肉・カレールーとあわせ、まさに「何でも1位」の都市。'
+  },
+  {
+    topic: '品目：砂糖（支出金額）',
+    text: '砂糖の支出額ランキング（2022〜2024年平均）で、2位鹿児島市・3位宮崎市を抑えて1位だった都市は？',
+    choices: ['鳥取市', '鹿児島市', '宮崎市', '松江市'],
+    correct: 0,
+    ranking: [['1位 鳥取市', '-'], ['2位 鹿児島市', '-'], ['3位 宮崎市', '-']],
+    trivia: 'かに・もやし・いわしに続き、砂糖でも鳥取市が支出額で全国トップという結果に。'
+  },
+  {
+    topic: '品目：めんつゆ（つゆ・たれ・支出金額）',
+    text: '「つゆ・たれ」（めんつゆ等）への年間支出額が5,901円で全国1位だった都市は？',
+    choices: ['高知市', '徳島市', '高松市', '松山市'],
+    correct: 0,
+    ranking: [['1位 高知市', '5,901円']],
+    trivia: '焼肉外食でも紹介した高知市は、めんつゆなど「つゆ・たれ」の支出額でも全国トップだった。'
+  },
+];
+
+const ROUND_SIZE = 6;
+let SESSION_QUESTIONS = [];
+let currentQ = 0;
+let score = 0;
+let answered = false;
+document.getElementById('round-size-label').textContent = ROUND_SIZE;
+document.getElementById('round-size-label2').textContent = ROUND_SIZE;
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildSessionQuestions(){
+  document.getElementById('pool-size-label').textContent = QUESTION_POOL.length;
+  const picked = shuffleArray(QUESTION_POOL).slice(0, ROUND_SIZE);
+  SESSION_QUESTIONS = picked.map(q=>{
+    const order = shuffleArray(q.choices.map((c,i)=>i));
+    const newChoices = order.map(i=>q.choices[i]);
+    const newCorrect = order.indexOf(q.correct);
+    return Object.assign({}, q, {choices:newChoices, correct:newCorrect});
+  });
+}
+
+const screenIntro = document.getElementById('screen-intro');
+const screenQuiz = document.getElementById('screen-quiz');
+const screenResult = document.getElementById('screen-result');
+
+document.getElementById('btn-start').addEventListener('click', ()=>{
+  buildSessionQuestions();
+  screenIntro.style.display = 'none';
+  screenQuiz.style.display = 'block';
+  currentQ = 0; score = 0;
+  renderQuestion();
+});
+
+function renderQuestion(){
+  answered = false;
+  const q = SESSION_QUESTIONS[currentQ];
+  document.getElementById('progress-label').textContent = `第${currentQ+1}問 / ${SESSION_QUESTIONS.length}問`;
+  document.getElementById('score-pill').textContent = `正解 ${score}`;
+  document.getElementById('progress-fill').style.width = (currentQ/SESSION_QUESTIONS.length*100) + '%';
+  document.getElementById('q-topic').textContent = q.topic;
+  document.getElementById('q-text').innerHTML = q.text;
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  q.choices.forEach((c, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.textContent = c;
+    btn.addEventListener('click', ()=> selectAnswer(i));
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'none';
+}
+
+function selectAnswer(i){
+  if(answered) return;
+  answered = true;
+  const q = SESSION_QUESTIONS[currentQ];
+  const buttons = document.querySelectorAll('#choices .choice');
+  buttons.forEach(b=> b.disabled = true);
+
+  if(i === q.correct){
+    score++;
+    buttons[i].classList.add('correct');
+  } else {
+    buttons[i].classList.add('wrong');
+    buttons[q.correct].classList.add('correct');
+  }
+
+  document.getElementById('score-pill').textContent = `正解 ${score}`;
+
+  const fb = document.getElementById('feedback');
+  const rankHtml = q.ranking.map(r=>`<div class="rank-item"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  fb.innerHTML = `<b>${i===q.correct ? '正解！' : '不正解...'}</b> ${q.trivia}<div class="rank-list">${rankHtml}</div>`;
+  fb.style.display = 'block';
+
+  document.getElementById('progress-fill').style.width = ((currentQ+1)/SESSION_QUESTIONS.length*100) + '%';
+  document.getElementById('btn-next').style.display = 'inline-block';
+}
+
+document.getElementById('btn-next').addEventListener('click', ()=>{
+  currentQ++;
+  if(currentQ >= SESSION_QUESTIONS.length){
+    showResult();
+  } else {
+    renderQuestion();
+  }
+});
+
+function showResult(){
+  screenQuiz.style.display = 'none';
+  screenResult.style.display = 'block';
+
+  document.getElementById('result-score-num').textContent = score;
+  document.getElementById('result-score-total').textContent = ` / ${SESSION_QUESTIONS.length}問正解`;
+
+  const total = SESSION_QUESTIONS.length;
+  const rate = score / total;
+
+  let emoji, title, desc;
+  if(rate >= 0.99){
+    emoji = '👑'; title = '総務省統計局 名誉フェロー';
+    desc = '全問正解！ 思い込みに惑わされない、真の統計通です。';
+  } else if(rate >= 0.65){
+    emoji = '🏆'; title = '家計調査マスター';
+    desc = 'かなりの好成績。ご当地グルメの「本当の1位」に詳しいようです。';
+  } else if(rate >= 0.35){
+    emoji = '🍜'; title = 'なかなかの統計通';
+    desc = 'イメージと実際のランキングの違い、少しつかめてきたのでは？';
+  } else {
+    emoji = '🔰'; title = '統計トリビア初心者';
+    desc = '思い込みに見事にハマったかも？ ランキングは毎年変わるので要チェックです。';
+  }
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-desc').textContent = desc;
+
+  drawShareCard(score, total, title, emoji);
+
+  const shareText = `【都道府県当てクイズ】${score}/${total}問正解で「${title}」でした！ あなたは家計調査トリビア、何問わかる？ #家計調査クイズ`;
+  document.getElementById('btn-x-share').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText);
+}
+
+function drawShareCard(score, total, title, emoji){
+  const canvas = document.getElementById('share-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const grad = ctx.createRadialGradient(W/2, H*0.3, 60, W/2, H*0.3, W*0.8);
+  grad.addColorStop(0, '#2a2350');
+  grad.addColorStop(1, '#100f1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#ff5da2';
+  ctx.font = '700 32px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText('都道府県当てクイズ', W/2, 130);
+  ctx.fillStyle = '#a79fc4';
+  ctx.font = '500 26px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText('家計調査トリビア', W/2, 175);
+
+  ctx.font = '180px sans-serif';
+  ctx.fillText(emoji, W/2, 400);
+
+  ctx.fillStyle = '#ffd23f';
+  ctx.font = '800 56px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText(title, W/2, 500);
+
+  ctx.fillStyle = '#f5f3fb';
+  ctx.font = '800 130px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText(score + ' / ' + total, W/2, 660);
+
+  ctx.fillStyle = '#a79fc4';
+  ctx.font = '500 30px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText('問正解', W/2, 715);
+
+  ctx.fillStyle = '#6b6390';
+  ctx.font = '400 24px "Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.fillText('出典: 総務省統計局「家計調査」品目別都市ランキング', W/2, 960);
+
+  const dataUrl = canvas.toDataURL('image/png');
+  const img = document.getElementById('share-preview');
+  img.src = dataUrl;
+  img.style.display = 'block';
+}
+
+document.getElementById('btn-download').addEventListener('click', ()=>{
+  const canvas = document.getElementById('share-canvas');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = '都道府県当てクイズ_結果.png';
+  a.click();
+});
+
+document.getElementById('btn-retry').addEventListener('click', ()=>{
+  screenResult.style.display = 'none';
+  screenIntro.style.display = 'block';
+});
+</script>
+</body>
+</html>
